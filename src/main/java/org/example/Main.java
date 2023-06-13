@@ -2,6 +2,7 @@ package org.example;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerResponse;
+import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.Image;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientConfig;
@@ -11,6 +12,7 @@ import com.github.dockerjava.transport.DockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient.Request;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 
 // https://github.com/docker-java/docker-java
@@ -76,11 +78,24 @@ public class Main {
 
 
 
+        System.out.println("Image list");
         List<Image> images = dockerClient.listImagesCmd().exec();
         for (Image image : images) {
             if (image.getRepoTags().length > 0) {
                 System.out.println(image.getId() + " - " + image.getRepoTags()[0]);
             }
+        }
+
+        System.out.println("\nContainer list");
+        List<Container> containers = dockerClient.listContainersCmd().withShowAll(true).exec();
+        for (Container container : containers) {
+            System.out.println("ID: " + container.getId());
+            System.out.println("Name: " + Arrays.toString(container.getNames()));
+            System.out.println("Image: " + container.getImage());
+            System.out.println("Command: " + container.getCommand());
+            //System.out.println("Port: " + Arrays.toString(container.getPorts()));
+            System.out.println("Status: " + container.getStatus());
+            System.out.println();
         }
 
         CreateContainerResponse containerResponse = dockerClient.createContainerCmd("docker/whalesay")
