@@ -14,6 +14,7 @@ import java.util.List;
 
 // https://github.com/docker-java/docker-java
 
+@ImmutableStyles
 public class Main {
     public static void main(String[] args) {
 
