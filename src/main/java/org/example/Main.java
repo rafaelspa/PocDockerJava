@@ -1,6 +1,7 @@
 package org.example;
 
 import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.model.Image;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientConfig;
@@ -8,7 +9,7 @@ import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient.Request;
-import com.github.dockerjava.transport.DockerHttpClient.Response;
+
 import java.time.Duration;
 import java.util.List;
 
@@ -49,7 +50,7 @@ public class Main {
                 .path("/_ping")
                 .build();
 
-        Response response = httpClient.execute(request);
+        //Response response = httpClient.execute(request);
 
 //        try (Response response = httpClient.execute(request)) {
 ////            assertThat(response.getStatusCode(), equalTo(200));
@@ -81,5 +82,11 @@ public class Main {
                 System.out.println(image.getId() + " - " + image.getRepoTags()[0]);
             }
         }
+
+        CreateContainerResponse containerResponse = dockerClient.createContainerCmd("docker/whalesay")
+                .withCmd("cowsay", "hello there")
+                .withName("whalesay-docker-java").exec();
+
+        dockerClient.startContainerCmd(containerResponse.getId()).exec();
     }
 }
