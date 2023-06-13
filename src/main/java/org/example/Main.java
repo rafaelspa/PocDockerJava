@@ -98,10 +98,14 @@ public class Main {
             System.out.println();
         }
 
-        CreateContainerResponse containerResponse = dockerClient.createContainerCmd("docker/whalesay")
-                .withCmd("cowsay", "hello there")
-                .withName("whalesay-docker-java").exec();
+        boolean containerExists = containers.stream()
+                .anyMatch(container -> Arrays.asList(container.getNames()).contains("/whalesay-docker-java"));
+        if (!containerExists) {
+            CreateContainerResponse containerResponse = dockerClient.createContainerCmd("docker/whalesay")
+                    .withCmd("cowsay", "hello there")
+                    .withName("whalesay-docker-java").exec();
 
-        dockerClient.startContainerCmd(containerResponse.getId()).exec();
+            dockerClient.startContainerCmd(containerResponse.getId()).exec();
+        }
     }
 }
