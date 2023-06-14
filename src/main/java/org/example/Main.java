@@ -2,6 +2,7 @@ package org.example;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerResponse;
+import com.github.dockerjava.api.command.PullImageResultCallback;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.Image;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
@@ -13,6 +14,7 @@ import com.github.dockerjava.transport.DockerHttpClient;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 // https://github.com/docker-java/docker-java
 
@@ -57,16 +59,26 @@ public class Main {
             System.out.println("Status: " + container.getStatus());
             System.out.println();
         }
-
-        boolean containerExists = containers.stream()
+        try {
+            boolean whalesayExists = images.stream().anyMatch(image -> Arrays.asList(image.getRepoTags()).contains("docker/whalesay:latest"));
+            if (!whalesayExists) {
+                System.out.println("whalesay img does not exist");
+                dockerClient.pullImageCmd("docker/whalesay")
+                        .exec(new PullImageResultCallback())
+                        .awaitCompletion(30, TimeUnit.SECONDS);
+            }
+            boolean containerExists = containers.stream()
                 .anyMatch(container -> Arrays.asList(container.getNames()).contains("/whalesay-docker-java"));
-        if (!containerExists) {
-            //container creation
-            CreateContainerResponse containerResponse = dockerClient.createContainerCmd("docker/whalesay")
-                    .withCmd("cowsay", "hello there")
-                    .withName("whalesay-docker-java").exec();
+            if (!containerExists) {
+                //container creation
+                CreateContainerResponse containerResponse = dockerClient.createContainerCmd("docker/whalesay")
+                        .withCmd("cowsay", "hello there")
+                        .withName("whalesay-docker-java").exec();
 
-            dockerClient.startContainerCmd(containerResponse.getId()).exec();
+                dockerClient.startContainerCmd(containerResponse.getId()).exec();
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
     }
 }
