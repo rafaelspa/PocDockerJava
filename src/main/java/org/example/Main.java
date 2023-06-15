@@ -1,9 +1,11 @@
 package org.example;
 
 import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.PullImageResultCallback;
 import com.github.dockerjava.api.model.Container;
+import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.Image;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientConfig;
@@ -11,6 +13,7 @@ import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
 
+import java.io.*;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -76,6 +79,31 @@ public class Main {
                         .withName("whalesay-docker-java").exec();
 
                 dockerClient.startContainerCmd(containerResponse.getId()).exec();
+
+                PipedOutputStream pipedOutputStream = new PipedOutputStream();
+                InputStream inputStream = new PipedInputStream(pipedOutputStream);
+
+                var response = dockerClient.attachContainerCmd(containerResponse.getId())
+                        .withLogs(true)
+                        .withStdErr(true)
+                        .withStdOut(true)
+                        .withFollowStream(true)
+                        .exec(new ResultCallback.Adapter<>() {
+                            public void onNext(Frame object) {
+                                System.out.println(object);
+                                try {
+                                    pipedOutputStream.write(object.getPayload());
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
+                        });
+
+                try {
+                    response.awaitCompletion();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             }
         } catch (Exception e) {
             System.out.println(e.getMessage());
