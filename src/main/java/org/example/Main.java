@@ -88,6 +88,7 @@ public class Main {
             //log output
             PipedOutputStream pipedOutputStream = new PipedOutputStream();
             InputStream inputStream = new PipedInputStream(pipedOutputStream);
+            StringBuilder stringBuilder = new StringBuilder();
 
             var response = dockerClient.attachContainerCmd(containerId)
                     .withLogs(true)
@@ -96,9 +97,12 @@ public class Main {
                     //.withFollowStream(true)
                     .exec(new ResultCallback.Adapter<>() {
                         public void onNext(Frame object) {
-                            System.out.println(object);
+                            //System.out.println(object);
                             try {
-                                pipedOutputStream.write(object.getPayload());
+                                byte[] payload = object.getPayload();
+                                pipedOutputStream.write(payload);
+                                stringBuilder.append(new String(payload));
+                                pipedOutputStream.flush();
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
@@ -106,10 +110,11 @@ public class Main {
                     });
 
             try {
-                response.awaitCompletion();
+                response.awaitCompletion(30, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+            System.out.println(stringBuilder);
 
             dockerClient.stopContainerCmd(containerId);
         } catch (Exception e) {
