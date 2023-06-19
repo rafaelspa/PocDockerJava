@@ -1,14 +1,11 @@
 package org.example.fetchmetadatagithub;
 
-import com.fasterxml.jackson.databind.deser.DataFormatReaders;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
