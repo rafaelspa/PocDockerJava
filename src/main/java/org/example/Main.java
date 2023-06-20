@@ -69,54 +69,68 @@ public class Main {
                 dockerClient.pullImageCmd("docker/whalesay")
                         .exec(new PullImageResultCallback())
                         .awaitCompletion(30, TimeUnit.SECONDS);
+                System.out.println("docker/whalesay image pulled.");
             }
 
             Optional<Container> optionalContainer = containers.stream().filter(c -> Arrays.asList(c.getNames()).contains("/whalesay-docker-java")).findAny();
             String containerId;
 
-            if (optionalContainer.isEmpty()) {
-                System.out.println("Creating container...");
-                CreateContainerResponse containerResponse = dockerClient.createContainerCmd("docker/whalesay")
-                        .withCmd("cowsay", "hello there")
-                        .withName("whalesay-docker-java").exec();
-                containerId = containerResponse.getId();
-            } else {
-                containerId = optionalContainer.get().getId();
-            }
-            dockerClient.startContainerCmd(containerId).exec();
+            List<String[]> commands = new ArrayList<>();
+            commands.add(new String[]{"cowsay", "monday"});
+            commands.add(new String[]{"cowsay", "tuesday"});
+            commands.add(new String[]{"cowsay", "wednesday"});
+            Map<String[], String> commandResult = new HashMap<>();
 
-            //log output
-            PipedOutputStream pipedOutputStream = new PipedOutputStream();
-            InputStream inputStream = new PipedInputStream(pipedOutputStream);
-            StringBuilder stringBuilder = new StringBuilder();
+            for (String[] command : commands) {
+                if (optionalContainer.isEmpty()) {
+                    System.out.println("Creating container...");
+                    CreateContainerResponse containerResponse = dockerClient.createContainerCmd("docker/whalesay")
+                            .withCmd(command)
+                            .withName("whalesay-docker-java").exec();
+                    containerId = containerResponse.getId();
+                    System.out.println("Container created.");
+                } else {
+                    containerId = optionalContainer.get().getId();
+                }
 
-            var response = dockerClient.attachContainerCmd(containerId)
-                    .withLogs(true)
-                    .withStdErr(true)
-                    .withStdOut(true)
-                    //.withFollowStream(true)
-                    .exec(new ResultCallback.Adapter<>() {
-                        public void onNext(Frame object) {
-                            //System.out.println(object);
-                            try {
-                                byte[] payload = object.getPayload();
-                                pipedOutputStream.write(payload);
-                                stringBuilder.append(new String(payload));
-                                pipedOutputStream.flush();
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
+                dockerClient.startContainerCmd(containerId).exec();
+
+                //log output
+                PipedOutputStream pipedOutputStream = new PipedOutputStream();
+                InputStream inputStream = new PipedInputStream(pipedOutputStream);
+                StringBuilder stringBuilder = new StringBuilder();
+
+                var response = dockerClient.attachContainerCmd(containerId)
+                        .withLogs(true)
+                        .withStdErr(true)
+                        .withStdOut(true)
+                        //.withFollowStream(true)
+                        .exec(new ResultCallback.Adapter<>() {
+                            public void onNext(Frame object) {
+                                //System.out.println(object);
+                                try {
+                                    byte[] payload = object.getPayload();
+                                    pipedOutputStream.write(payload);
+                                    stringBuilder.append(new String(payload));
+                                    pipedOutputStream.flush();
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
                             }
-                        }
-                    });
+                        });
 
-            try {
-                response.awaitCompletion(30, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                try {
+                    response.awaitCompletion(30, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+                dockerClient.stopContainerCmd(containerId);
+                dockerClient.removeContainerCmd(containerId).exec();
+
+                commandResult.put(command, stringBuilder.toString());
+                System.out.println(commandResult.get(command));
             }
-            System.out.println(stringBuilder);
-
-            dockerClient.stopContainerCmd(containerId);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
