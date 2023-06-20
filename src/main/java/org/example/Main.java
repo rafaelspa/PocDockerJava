@@ -125,7 +125,7 @@ public class Main {
                     throw new RuntimeException(e);
                 }
 
-                dockerClient.stopContainerCmd(containerId);
+                dockerClient.stopContainerCmd(containerId).exec();
                 dockerClient.removeContainerCmd(containerId).exec();
 
                 commandResult.put(command, stringBuilder.toString());
